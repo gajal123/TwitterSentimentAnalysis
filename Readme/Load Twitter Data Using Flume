@@ -1,0 +1,157 @@
+==========================================================================================
+==========================================================================================
+
+Objective:
+----------
+
+How to Analyse Twitter data using Flume.
+
+----------------------------------------------
+
+Prerequisite for analysing Tweets using Flume:
+**********************************************
+- A valid Twitter account.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Start your Flume Practical
+**************************
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+# Follow the given below steps:-
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 1:- Go to twitter application management website using below link and login to your twitter account :
+
+		Link:  https://apps.twitter.com/
+
+# Create your own Twitter Apps- Please follow the below steps
+
+
+	1.1 Click On "Create new app" , then A new page will be open "Create an Application"
+	
+	1.2  Fill the Application Details(A/c to your choice)
+
+		Name -> TwitterApp				// Enter Application Name
+		Description -> Sentiment Analysis		// Enter the Application Description 
+		Website -> http://www.skillspeed.com		// Enter the Website Name
+
+		Accept the Developer Agreement "Yes,I agree" 
+		then Click on "Create your twitter application" . If everything goes fine then your application will be created
+		And you will be go to new new Page
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Step 2:  Now you will be in  "Application Management" web page with Application Details
+	
+	2.1 Click on Keys and Access tokens, now you can see Consumer key and Consumer secret. 
+	    Consumer key and Consumer secret is used in flume.conf file creation.
+
+	2.2 Scroll down to find the "Access Token & Access token secret" Keys.
+
+	    Click on "Create my access token"  then wait for a few seconds, it will generate your access token key.
+	    now you can see "Access token" & "Access token secret" . you have to use these token in flume.conf file. 
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 3:- Create a "flume.conf" file And add configuration setting in the flume.conf file
+	
+	Importants Points:  you have to use your own values of following
+				-> consumer key
+				-> consumerSecret
+				-> accessToken
+				-> accessTokenSecret
+
+
+# Entry of flume.conf file
+-------------------------------------------------------------------------------------------------------------------------------------
+
+TwitterAgent.sources = Twitter
+TwitterAgent.channels = MemChannel
+TwitterAgent.sinks = HDFS
+ 
+TwitterAgent.sources.Twitter.type = com.cloudera.flume.source.TwitterSource
+TwitterAgent.sources.Twitter.channels = MemChannel
+TwitterAgent.sources.Twitter.consumerKey = *******************************************************   Add your consumerKey  **********************************
+TwitterAgent.sources.Twitter.consumerSecret = ****************************************************   Add your consumerSecret  *******************************
+TwitterAgent.sources.Twitter.accessToken = *******************************************************   Add your accessToken  **********************************
+TwitterAgent.sources.Twitter.accessTokenSecret = *************************************************   Add your accessTokenSecret  ****************************
+ 
+TwitterAgent.sources.Twitter.keywords = flipkart,flipkart online marketing,online marketing
+ 
+TwitterAgent.sinks.HDFS.channel = MemChannel
+TwitterAgent.sinks.HDFS.type = hdfs
+TwitterAgent.sinks.HDFS.hdfs.path = hdfs://localhost:9000/user/flume/tweets/
+TwitterAgent.sinks.HDFS.hdfs.fileType = DataStream
+TwitterAgent.sinks.HDFS.hdfs.writeFormat = Text
+TwitterAgent.sinks.HDFS.hdfs.batchSize = 1000
+TwitterAgent.sinks.HDFS.hdfs.rollSize = 0
+TwitterAgent.sinks.HDFS.hdfs.rollCount = 10000
+ 
+TwitterAgent.channels.MemChannel.type = memory
+TwitterAgent.channels.MemChannel.capacity = 10000
+TwitterAgent.channels.MemChannel.transactionCapacity = 100
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# End of flume.conf file
+
+
+-----------------------------------------------------------------------------------------------------------
+
+
+
+Step 4: Copy the flume.conf file to  location /home/user/flume/apache-flume-1.5.2-bin/conf directory
+
+
+
+--------------------------------------------------------------------------------------------------
+
+Step 5:- Download "flume-sources-1.0-SNAPSHOT" JAR file add to the flume/apache-flume-1.5.2-bin/lib/  directory
+
+
+	# Download link for flume-sources-1.0-SNAPSHOT.jar file :
+
+	  Link: https://www.dropbox.com/s/rxi6ur3emsdjlws/flume-sources-1.0-SNAPSHOT.jar?dl=0%27
+
+
+---------------------------------------------------------------------------------------------------
+
+
+
+Step 7 :- Open you "Terminal"
+
+# Change directory:
+
+	$ cd flume/apache-flume-1.5.2-bin/conf/
+
+# Run the flume command for load the twitter data to hdfs
+	
+	$ flume-ng agent --conf .conf. -f flume.conf -Dflume.root.logger=DEBUG,console -n TwitterAgent
+
+
+	if every things goes fine then twitter data will be upload to hdfs 
+
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+# check output
+--------------------
+
+--> Open you browser go to this link:
+
+Link:-	localhost:50070/dfshealth.jsp
+ 
+--> Click on "Browse the filesystem" link 
+
+--> Go to /user/flume/tweets and you can check output
+
+
+--------------------------------------------------------------------------------------------------
+
+
+
+
+

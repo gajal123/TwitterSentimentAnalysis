@@ -1,0 +1,25 @@
+package senti;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hive.ql.exec.UDF;
+ 
+public class ToUpper extends UDF {
+ 
+ public String evaluate(String input) {
+	 
+	
+	 String out = new String();
+	 
+	 if (input == null) {
+		 return null;
+	 }
+ 
+	 else {
+		     out=  input.replaceAll("\\P{L}","");
+		 	 
+	 }
+	 
+	 return out ;
+ 
+ }
+ }

@@ -1,0 +1,221 @@
+
+
+Objective - perform Sentiment Analysis on the tweets from Twitter using Hive.
+
+
+# Ignore hive reserved keywords
+
+hive> SET hive.support.sql11.reserved.keywords=false;
+
+
+# Add Json-serde Jar File
+
+hive> ADD JAR /usr/local/hive/lib/hive-serdes-1.0-SNAPSHOT.jar;
+
+
+# Create "tweet" Table
+
+hive> CREATE EXTERNAL TABLE tweet (
+   id BIGINT,
+   created_at STRING,
+   source STRING,
+   favorited BOOLEAN,
+   retweet_count INT,
+   retweeted_status STRUCT<
+      text:STRING,
+      user:STRUCT<screen_name:STRING,name:STRING>>,
+   entities STRUCT<
+      urls:ARRAY<STRUCT<expanded_url:STRING>>,
+      user_mentions:ARRAY<STRUCT<screen_name:STRING,name:STRING>>,
+      hashtags:ARRAY<STRUCT<text:STRING>>>,
+   text STRING,
+   user STRUCT<
+      screen_name:STRING,
+      name:STRING,
+      friends_count:INT,
+      followers_count:INT,
+      statuses_count:INT,
+      verified:BOOLEAN,
+      utc_offset:INT,
+      time_zone:STRING>,
+   in_reply_to_screen_name STRING
+) 
+ROW FORMAT SERDE 'com.cloudera.hive.serde.JSONSerDe'
+LOCATION '/user/flume/tweets';
+
+
+
+
+# most number of followers,
+
+hive> select user.screen_name, user.followers_count c from tweet order by c desc; 
+
+hive> SELECT t.retweeted_screen_name, sum(retweets) AS total_retweets, count(*) AS tweet_count FROM (SELECT retweeted_status.user.screen_name as retweeted_screen_name, retweeted_status.text, max(retweet_count) as retweets FROM tweet GROUP BY retweeted_status.user.screen_name, retweeted_status.text) t GROUP BY t.retweeted_screen_name ORDER BY total_retweets DESC LIMIT 10;
+
+
+
+
+
+
+
+
+
+
+
+# Create a table with the help of "JSONSerde JAR FIle"
+
+hive> create external table load_tweets1(id BIGINT,text STRING) ROW FORMAT SERDE 'com.cloudera.hive.serde.JSONSerDe' LOCATION '/user/flume/tweets';
+	
+hive> describe load_tweets1;
+
+hive> select * from load_tweets1;
+
+
+
+--------------
+--------------
+--------------
+
+# Split the tweets into Array of words using hive function "split"
+
+hive> create table split_words1 as select id as id,split(text,' ') as words from load_tweets1;
+
+hive> describe split_words1;
+
+
+# Use hive function "expolde" which will extract each element from an array and create a new row for each element.
+
+hive> create table tweet_word1 as select id as id,word from split_words1 LATERAL VIEW explode(words) w as word;
+
+hive> select * from tweet_word1;
+
+
+-------------
+-------------
+-------------
+
+
+
+# Use "stop.txt" dictionary to remove articles from table
+
+hive> create table stopword1(word string) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+LOAD DATA INPATH '/stop.txt' into TABLE stopword1;
+
+
+hive> create table word_join9 as select distinct tweet_word1.id,tweet_word1.word from tweet_word1 where tweet_word1.word NOT IN (select stopword1.word from stopword1);
+
+
+
+# Remove URL Link from the table 
+
+hive> create table new1(id BIGINT,word string)
+row format delimited fields terminated by ',';
+
+hive> insert into new1(id,word) select id,word from word_join9 where word not like "https://%";
+
+
+----------------
+----------------
+----------------
+
+
+# Create UDF program for removing numeric and Special character 
+
+
+hive> add jar Desktop/sentiment2.jar;
+
+hive> create temporary function ak  as 'senti.ToUpper';
+
+hive> create table sentiment1(id BIGINT,word string);
+insert into sentiment1(id,word) select id,ak(word) from new1;
+
+hive> select * from sentiment1;
+
+
+
+# Removing NULL Field from the table
+
+hive> create table spaces1(id BIGINT,word string);
+hive> insert into spaces1(id,word) select * from sentiment1 where word != '';
+select * from spaces1;
+
+
+-------------------
+-------------------
+-------------------
+
+
+# Convert data into lower case 
+
+hive> create table lowercase(id BIGINT,word string);
+insert into lowercase(id,word) select  id, LOWER(word) from spaces1;
+
+
+
+# Add "AFINN" dictionary to Calculate sentiments 
+
+hive> create table dictionary5(word string,rating int) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+
+hive> LOAD DATA INPATH '/AFINN.txt' into TABLE dictionary5;
+
+Now, we will join the tweet_word table and dictionary table so that the rating of the word will be joined with the word.
+
+hive> create table final1 as select lowercase.id,lowercase.word,dictionary5.rating from lowercase LEFT OUTER JOIN dictionary5 ON(lowercase.word = dictionary5.word);
+
+
+
+hive> select * from final1;
+
+hive> create table final2 as select * from final1 where rating is not null;
+
+hive> select * from final2;
+
+# performing an Average operation on the rating of the words of each tweet so that the average rating of each tweet can be found.
+
+hive> select id,AVG(rating) as rating from final2 GROUP BY final2.id order by rating DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
